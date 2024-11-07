@@ -3,10 +3,11 @@
 ## How to install experimental conda environment
 First, you need to install Mambaforge, which is a faster version of Conda. You can download and install it from the [Mambaforge GitHub page](https://github.com/conda-forge/miniforge#mambaforge).
 
-Once Mambaforge is installed, you can create the experimental environment using the provided `environment.yml` file. Run the following command in your terminal:
+Once Mambaforge is installed, you can create the experimental environment using the provided `environment.yml` file. 
+Make sure you are in the folder `prob_risk_noise/experiment` and run the following command in your terminal:
 
 ```sh
-mamba env create -f environment.yml
+mamba env create -f environment.yml # Make sure you are in `prob_risk_noise/experiment` first
 ```
 
 This will create a new conda environment with all the dependencies specified in the `environment.yml` file.

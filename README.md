@@ -16,5 +16,5 @@ git submodule update --init --recursive
 ```
 
 ## Content
- * [Experimental code](experiment) See [Readme](experiment/README.md) there for details on experimental code.
+ * [Experimental code](experiment) - see [Readme](experiment/README.md) there for details on experimental code.
  * [Hypotheses](prob_risk_noise/notebooks/hypotheses.ipynb) The influence of probability magnitude on the noisiness of neural magnitude payoff representations
