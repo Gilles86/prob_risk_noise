@@ -31,11 +31,27 @@ More info about the main.py-script can be found by running
 ```sh
 python main.py --help
 
+usage: main.py [-h] [--settings SETTINGS] [--n_runs N_RUNS] [--no_examples] [--no_feedback] subject session start_run {narrow,wide}
+
+positional arguments:
+  subject              Subject nr
+  session              Session
+  start_run            Run
+  {narrow,wide}        Range (either narrow or wide)
+
+optional arguments:
+  -h, --help           show this help message and exit
+  --settings SETTINGS  Settings label
+  --n_runs N_RUNS      n_runs_to_run
+  --no_examples        Do not run examples block
+  --no_feedback        Do not run feedback block
 ```
 
 ## Configuring 
 You can set up different settings for different experimental environments (e.g., home, 7T scanner, testing room...)
 by setting up .yml-files in (`settings`)[settings]
+
+You can then use a specific setting by including `--settings <setting_name_without_.yml>` after the `main.py`-command.
 
 
 ## Dependencies 

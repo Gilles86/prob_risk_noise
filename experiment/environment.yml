@@ -1,0 +1,13 @@
+name: prob_risk_noise_experiment
+channels:
+  - conda-forge
+dependencies:
+  - python=3.9
+  - yaml
+  - pandas
+  - hdf5
+  - pip
+  - wxpython
+  - pip:
+     - psychopy
+     - ./libs/exptools2  # Path to the exptools2 submodule
