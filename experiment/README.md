@@ -35,7 +35,9 @@ python main.py 1 1 1 narrow # (Subject 1, session 1, run 1, narrow range conditi
 More info about the main.py-script can be found by running 
 ```sh
 python main.py --help
+```
 
+```sh
 usage: main.py [-h] [--settings SETTINGS] [--n_runs N_RUNS] [--no_examples] [--no_feedback] subject session start_run {narrow,wide}
 
 positional arguments:
