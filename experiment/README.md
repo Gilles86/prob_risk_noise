@@ -29,6 +29,9 @@ Once the environment is activated, you can run the experiments using the provide
 python main.py 1 1 1 narrow # (Subject 1, session 1, run 1, narrow range condition)
 ```
 
+* *Note:* You can always quit the experiment by pressing *q*.
+* Note 2:* When going through the examples, pressing a button for the first ~500ms doesn't work. This is on purpose. Check out [examples.py](examples.py#L33) to see how that's implemented.
+
 More info about the main.py-script can be found by running 
 ```sh
 python main.py --help
