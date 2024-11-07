@@ -10,7 +10,8 @@ Make sure you are in the folder `prob_risk_noise/experiment` and run the followi
 mamba env create -f environment.yml # Make sure you are in `prob_risk_noise/experiment` first
 ```
 
-This will create a new conda environment with all the dependencies specified in the `environment.yml` file.
+This will create a new conda environment named `prob_risk_noise_experiment`
+with all the dependencies specified in the `environment.yml` file.
 
 ### Activate environment
 
