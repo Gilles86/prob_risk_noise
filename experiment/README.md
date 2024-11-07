@@ -56,14 +56,14 @@ optional arguments:
 
 ## Configuring 
 You can set up different settings for different experimental environments (e.g., home, 7T scanner, testing room...)
-by setting up .yml-files in (`settings`)[settings]
+by setting up .yml-files in [settings](settings)
 
 You can then use a specific setting by including `--settings <setting_name_without_.yml>` after the `main.py`-command.
 
 
 ## Dependencies 
 
-Note that this experiment is based on the (exptools2)[https://github.com/Gilles86/exptools2] package developed by Lukas Snoek, Gilles de Hollander, Tomas Knapen and other in Amsterdam.
-See also their (examples)[https://github.com/Gilles86/exptools2/tree/master/demos] for some intuition about `Trial`, `Session` and `Stimulus`-objects.
+Note that this experiment is based on the [exptools2](https://github.com/Gilles86/exptools2) package developed by Lukas Snoek, Gilles de Hollander, Tomas Knapen and others in Amsterdam.
+See also their [examples](https://github.com/Gilles86/exptools2/tree/master/demos) for some intuition about `Trial`, `Session`, and `Stimulus` objects.
 
-Exptools2, in turn, is built upon (psychopy)[https://www.psychopy.org/index.html].
+Exptools2, in turn, is built upon [psychopy](https://www.psychopy.org/index.html).
