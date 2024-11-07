@@ -11,3 +11,5 @@ dependencies:
   - pip:
      - psychopy
      - ./libs/exptools2  # Path to the exptools2 submodule
+     - psychopy-sounddevice
+     - psychopy-pyo
