@@ -6,7 +6,7 @@ from exptools2.core import Trial
 import yaml
 from instruction import InstructionTrial
 
-def _sample_dot_positions(n=10, circle_radius=20, dot_radius=1, min_ecc=0.2, max_n_tries=10000):
+def _sample_dot_positions(n=10, circle_radius=20, dot_radius=1, min_ecc=0.1, max_n_tries=10000):
 
     coords = np.zeros((0, 2))
     tries = 0

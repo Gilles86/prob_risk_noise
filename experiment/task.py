@@ -5,72 +5,84 @@ from psychopy import event
 from exptools2.core import PylinkEyetrackerSession, Trial
 from utils import _create_stimulus_array, get_output_dir_str, DummyWaiterTrial, OutroTrial, get_settings
 from instruction import InstructionTrial
-from stimuli import FixationLines, ResponseSlider
+from stimuli import FixationLines, ResponseSlider, ProbabilityPieChart
 import numpy as np
 import logging
 from psychopy.visual import Line, Rect, TextStim
-from session import EstimationSession
-from score import ScoreTrial
+
+class ProbCueTrial(InstructionTrial):
+
+    def __init__(self, session, trial_nr, prob, **kwargs):
+
+        txt = session.instructions['prob_cue'].format(prob=int(prob*100))
+        bottom_txt = ""
+
+        self.prob_cue = ProbabilityPieChart(session.win,
+                                            prob,
+                                            session.settings['prob_cue'].get('cue_size'),
+                                            pos=(0, -1.))
+
+        super().__init__(session, trial_nr, txt, bottom_txt=bottom_txt,
+                        phase_durations=[session.settings['durations']['cue_trials']],
+                         **kwargs)
+
+        self.text.pos = (0, 1.)
+
+    def draw(self):
+        super().draw()
+        self.prob_cue.draw()
+
+    def get_events(self):
+        Trial.get_events(self)
+
 
 class TaskTrial(Trial):
     def __init__(self, session, trial_nr, phase_durations=None,
                 jitter=1,
-                stimulus_series=False,
-                n=15, **kwargs):
+                payoff=15, prob=0.55, **kwargs):
 
         if phase_durations is None:
-            if stimulus_series:
-                phase_durations = [session.settings['durations']['first_fixation'],
-                                session.settings['durations']['second_fixation'],
-                                session.settings['durations']['array_duration'] / 4.,
-                                session.settings['durations']['array_duration'] / 4.,
-                                session.settings['durations']['array_duration'] / 4.,
-                                session.settings['durations']['array_duration'] / 4.,
-                                jitter,
-                                session.settings['durations']['response_screen'],
-                                session.settings['durations']['feedback'],
-                                0.0]
-            else:
-                phase_durations = [session.settings['durations']['first_fixation'],
-                                session.settings['durations']['second_fixation'],
-                                session.settings['durations']['array_duration'],
-                                jitter,
-                                session.settings['durations']['response_screen'],
-                                session.settings['durations']['feedback'],
-                                0.0]
+            phase_durations = [session.settings['durations']['first_fixation'], # Red fixation
+                               session.settings['durations']['second_fixation'],# Pie chart
+                            session.settings['durations']['array_duration'],    # Doy display
+                            jitter,                                 # ISI            
+                            session.settings['durations']['response_screen'], # Response
+                            session.settings['durations']['feedback'], # Feedback
+                            0.0] #Spillover
 
         self.total_duration = np.sum(phase_durations)
-
-        self.stimulus_series = stimulus_series
 
         self.stimulus_phase = [2]
         self.response_phase = 4
         self.feedback_phase = 5
 
-        if self.stimulus_series:
-            self.stimulus_phase += [3, 4, 5]
-            self.response_phase = 7
-            self.feedback_phase = 8
-
-        phase_names = ['fixation1', 'fixation2', 'stimulus', 'jitter', 'response', 'feedback', 'iti']
-
-        if self.stimulus_series:
-            phase_names = ['fixation1', 'fixation2', 'stimulus1', 'stimulus2', 'stimulus3', 'stimulus4', 'jitter', 'response', 'feedback', 'iti']
+        phase_names = ['fixation1', 'prob_cue', 'stimulus', 'jitter', 'response', 'feedback', 'iti']
 
         super().__init__(session, trial_nr, phase_durations, phase_names=phase_names, **kwargs)
 
-        self.parameters['n'] = n
+        self.parameters['prob'] = prob
+        self.parameters['payoff'] = payoff
         self.parameters['jitter'] = jitter
-        self.stimulus_array = _create_stimulus_array(self.session.win, n, self.session.settings['cloud'].get('aperture_radius'), self.session.settings['cloud'].get('dot_radius'),)
+        self.stimulus_array = _create_stimulus_array(self.session.win, self.parameters['payoff'],
+                                                     self.session.settings['cloud'].get('aperture_radius'),
+                                                     self.session.settings['cloud'].get('dot_radius'),)
 
-        self.too_late_stimulus = TextStim(self.session.win, text='Too late!', pos=(0, 0), color=(1, -1, -1), height=0.5)
-        self.parameters['start_marker_position'] = np.random.randint(self.session.settings['range'][0], self.session.settings['range'][1] + 1)
+        self.prob_cue = ProbabilityPieChart(self.session.win, self.parameters['prob'],
+                                            self.session.settings['prob_cue'].get('fixation_size'),
+                                            include_text=False)
+
+        if self.session.settings['task'].get('show_prob_during_payoff'):
+            self.prob_fixation = ProbabilityPieChart(self.session.win, self.parameters['prob'],
+                                                self.session.settings['prob_cue'].get('fixation_size'),
+                                                include_text=False)
+
+
+        self.parameters['start_marker_position'] = np.random.randint(self.session.settings['slider']['range'][0],
+                                                                     self.session.settings['slider']['range'][1] + 1)
 
     def get_events(self):
 
         events = super().get_events()
-
-        buttons = self.session.settings['']
 
         response_slider = self.session.response_slider
 
@@ -113,25 +125,22 @@ class TaskTrial(Trial):
 
         if (self.phase == self.feedback_phase) & (not hasattr(self, 'response_onset')):
             self.session.fixation_lines.draw(draw_fixation_cross=False)
+        elif self.phase in self.stimulus_phase:
+            self.session.fixation_lines.draw(draw_fixation_cross=False)
         else:
             self.session.fixation_lines.draw()
 
         response_slider = self.session.response_slider
 
-        if self.phase == 0:
+        if self.phase == 0: # Fixation
             self.session.fixation_lines.setColor((-1, .5, -1), fixation_cross_only=True)
-        elif self.phase == 1:
-            self.session.fixation_line.setColor((1, -1, -1), fixation_cross_only=True)
+        elif self.phase == 1: # Prob cue
+            self.session.fixation_lines.setColor((1, -1, -1), fixation_cross_only=True)
+            self.prob_cue.draw()
         elif self.phase in self.stimulus_phase:
 
-            if self.stimulus_series:
-                if self.previous_phase != self.phase:
-                    if self.phase == 3:
-                        self.stimulus_array.xys[:, 0] *= -1
-                    if self.phase == 4:
-                        self.stimulus_array.xys[:, 1] *= -1
-                    if self.phase == 5:
-                        self.stimulus_array.xys[:, 0] *= -1
+            if self.session.settings['task'].get('show_prob_during_payoff'):
+                self.prob_fixation.draw()
 
             self.stimulus_array.draw()
 
@@ -148,53 +157,18 @@ class TaskTrial(Trial):
                 response_slider.marker.inner_color = self.session.settings['slider'].get('feedbackColor')
                 response_slider.draw()
             else:
-                self.too_late_stimulus.draw()
+                self.session.too_late_stimulus.draw()
                     
         self.previous_phase = self.phase
-class TaskSession(EstimationSession):
-
-
-    def create_trials(self, include_instructions=True):
-        """Create trials."""
-
-
-        instruction_trial1 = InstructionTrial(self, 0, self.instructions['intro_part3'].format(run=self.settings['run']))
-        instruction_trial2 = InstructionTrial(self, 0, self.instructions['intro_block'].format(range_low=self.settings['range'][0],
-                                                                                               range_high=self.settings['range'][1]))
-
-        dummy_trial = DummyWaiterTrial(self, 0, n_triggers=self.settings['mri']['n_dummy_scans'])
-        
-        self.trials = [instruction_trial1, instruction_trial2, dummy_trial]
-
-        if not include_instructions:
-            self.trials = self.trials[1:]
-
-        n_trials = self.settings['task'].get('n_trials')
-        range = self.settings['range']
-        ns = np.random.randint(range[0], range[1] + 1, n_trials)
-
-        possible_isis = self.settings['durations'].get('isi')
-        isis = possible_isis * int(np.ceil(n_trials / len(possible_isis)))
-        isis = isis[:n_trials]
-        np.random.shuffle(isis)
-
-        self.trials += [TaskTrial(self, i+1, jitter=jitter, n=n, stimulus_series=self.settings['cloud']['stimulus_series']) for i, (n, jitter) in enumerate(zip(ns, isis))]
-
-        self.trials.append(OutroTrial(session=self))
-
-        self.trials.append(ScoreTrial(self, 0))
-
-
 
 def main(subject, session, run, range, settings='default', calibrate_eyetracker=False):
-
-
+    from session import WTPSession
     output_dir, output_str = get_output_dir_str(subject, session, 'estimation_task', run)
     settings_fn, use_eyetracker = get_settings(settings)
 
-    session = TaskSession(output_str=output_str, subject=subject,
+    session = WTPSession(output_str=output_str, subject=subject,
                           output_dir=output_dir, settings_file=settings_fn, 
-                          run=run, range=range, eyetracker_on=use_eyetracker,
+                          run=run, eyetracker_on=use_eyetracker,
                           calibrate_eyetracker=calibrate_eyetracker)
 
     session.create_trials()
@@ -205,11 +179,9 @@ if __name__ == "__main__":
     argparser.add_argument('subject', type=str, help='Subject nr')
     argparser.add_argument('session', type=str, help='Session')
     argparser.add_argument('run', type=int, help='Run')
-    argparser.add_argument('range', choices=['narrow', 'wide'], help='Range (either narrow or wide)')
     argparser.add_argument('--settings', type=str, help='Settings label', default='default')
     argparser.add_argument('--calibrate_eyetracker', action='store_true', dest='calibrate_eyetracker')
 
-
     args = argparser.parse_args()
 
-    main(args.subject, args.session, args.run, args.range, args.settings, calibrate_eyetracker=args.calibrate_eyetracker)
+    main(args.subject, args.session, args.run, args.settings, calibrate_eyetracker=args.calibrate_eyetracker)

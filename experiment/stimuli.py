@@ -1,4 +1,4 @@
-from psychopy.visual import Circle, Line, Rect, TextStim
+from psychopy.visual import Circle, Line, Rect, TextStim, Pie
 import numpy as np
 
 
@@ -234,3 +234,33 @@ class ResponseSlider(object):
 
         if self.show_number:
             self.number.pos = (self._pos[0], self._pos[1] - self.bar.height*1.75)
+
+class ProbabilityPieChart(object):
+
+    def __init__(self, window, prob, size, prefix='',
+                include_text=True,
+                 pos=(0.0, 0.0), color_pos=(.65, .65, .65), color_neg=(-.65, -.65, -.65)):
+
+        deg = prob * 360.
+
+        self.piechart_pos = Pie(window, end=deg, fillColor=color_pos,
+                                pos=pos,
+                                size=size)
+        self.piechart_neg = Pie(window, start=deg, end=360, fillColor=color_neg,
+                                pos=pos,
+                                size=size)
+
+
+        self.include_text = include_text
+
+        if self.include_text:
+            txt = f'{prefix}{int(prob*100):d}%'
+            self.text = TextStim(window, pos=(pos[0], pos[1]+size*1.),
+                                text=txt, wrapWidth=size*3, height=size*.75)
+
+    def draw(self):
+        self.piechart_pos.draw()
+        self.piechart_neg.draw()
+        
+        if self.include_text:
+            self.text.draw()
