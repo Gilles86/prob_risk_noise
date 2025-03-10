@@ -9,6 +9,8 @@ class FixationLines(object):
         win_size = win.size
         max_dimension = np.max(win_size)
 
+        kwargs['colorSpace'] = 'rgb'
+
         coord = circle_radius * 1.1 * np.cos(np.pi / 4)
 
         # Fixation cross center
@@ -138,6 +140,7 @@ class RoundedRectangleWithBorder(object):
         adjusted_corner_radius = corner_radius - borderWidth
         self.outer_rectangle = RoundedRectangle(win, pos, width, height, corner_radius, outer_color)
         self.inner_rectangle = RoundedRectangle(win, pos, width-borderWidth*2, height-borderWidth*2, adjusted_corner_radius, inner_color)
+        self.width = width
 
     def draw(self):
         self.outer_rectangle.draw()
@@ -172,11 +175,15 @@ class ResponseSlider(object):
                  show_number=True,
                  markerColor=None,
                  text_height=0.5,
+                 slider_type='natural',
+                 slider_width=None,
                  *args, **kwargs):
 
+        assert slider_type in ['natural', 'log']
         self.range = range
         self.height = height
 
+        self.slider_type = slider_type
         self.show_number = show_number
 
         if self.show_number:
@@ -188,14 +195,17 @@ class ResponseSlider(object):
         if markerColor is None:
             markerColor = color
 
-        self.delta_rating_deg = length / (range[1] - range[0])
-
         self.show_marker = show_marker
 
         self.bar = Rect(win, width=length, height=height, pos=position,
                         lineColor=borderColor, color=color)
 
-        self.marker = RoundedRectangleWithBorder(win, position, height*.5, height*1.5, height*.15, markerColor, borderColor, borderWidth=0.1)
+        if slider_width is None:
+            self.slider_width = height*.5
+        else:
+            self.slider_width = slider_width
+
+        self.marker = RoundedRectangleWithBorder(win, position, self.slider_width, height*1.5, height*.15, markerColor, borderColor, borderWidth=0.05)
 
         self.setMarkerPosition(marker_position)
 
@@ -207,17 +217,60 @@ class ResponseSlider(object):
             self.marker.draw()
 
             if self.show_number:
-                self.number.text = str(self.marker_position)
+                if self.slider_type == 'natural':
+                    self.number.text = f'${self.marker_position:.2f}'
+                elif self.slider_type == 'log':
+                    self.number.text = f'${self.marker_position:.2f}'
                 self.number.draw()
 
     def setMarkerPosition(self, number):
+        # Clip the number to stay within the valid range
         number = np.clip(number, self.range[0], self.range[1])
-        position = self.bar.pos[0] + (number - self.range[0]) / (self.range[1] - self.range[0]) * self.bar.width - self.bar.width/2., self.bar.pos[1]
-        self.marker.pos = position
+
+        if self.slider_type in ['natural', 'two-stage']:
+            # Linear mapping
+            fraction = (number - self.range[0]) / (self.range[1] - self.range[0])
+            width_bar_minus_marker = self.bar.width - self.marker.width
+            position_x = self.bar.pos[0] + fraction * width_bar_minus_marker - width_bar_minus_marker / 2.
+
+        elif self.slider_type == 'log':
+            # Logarithmic mapping
+            log_min = np.log10(self.range[0])
+            log_max = np.log10(self.range[1])
+            log_value = (np.log10(number) - log_min) / (log_max - log_min)
+            position_x = self.bar.pos[0] + log_value * self.bar.width - self.bar.width / 2.
+        else:
+            raise ValueError("Unsupported slider type")
+
+        # Set marker position
+        self.marker.pos = (position_x, self.bar.pos[1])
         self.marker_position = number
 
+
     def mouseToMarkerPosition(self, mouse_pos):
-        return int((mouse_pos - self.bar.pos[0] + self.bar.width/2) / self.bar.width * (self.range[1] - self.range[0]) + self.range[0])
+
+        if self.slider_type in ['natural', 'two-stage']:
+            fraction = (mouse_pos - self.bar.pos[0] + self.bar.width / 2) / self.bar.width
+            fraction = np.clip(fraction, 0, 1)  # Ensure it's between 0 and 1
+            return self.range[0] + fraction * (self.range[1] - self.range[0])
+
+        elif self.slider_type == 'log':
+            # Convert mouse position to a fraction of the slider width
+            fraction = (mouse_pos - self.bar.pos[0] + self.bar.width/2) / self.bar.width
+            
+            # Ensure the fraction is within valid range
+            fraction = max(0, min(1, fraction))
+            
+            # Convert the fraction to a logarithmic scale
+            log_min = np.log10(self.range[0])
+            log_max = np.log10(self.range[1])
+            
+            log_value = log_min + fraction * (log_max - log_min)
+            
+            return 10 ** log_value
+        else:
+            raise ValueError("Unsupported slider type")
+
 
     @property
     def pos(self):
@@ -234,6 +287,59 @@ class ResponseSlider(object):
 
         if self.show_number:
             self.number.pos = (self._pos[0], self._pos[1] - self.bar.height*1.75)
+
+class RangeResponseSlider(ResponseSlider):
+
+    def __init__(self, win, position, length, height, color, borderColor, range, marker_position,
+                 width_subrange=None,
+                 show_marker=False,
+                 show_number=True,
+                 markerColor=None,
+                 text_height=0.5,
+                 slider_type='natural',
+                 slider_width=None,
+                 width_proportion=0.1,
+                 *args, **kwargs):
+        self.range = range
+
+        if width_subrange is None:
+            width_subrange = (range[1] - range[0]) * width_proportion
+            self.width_proportion = width_proportion
+        else:
+            self.width_proportion = width_subrange / length
+
+        slider_width = width_subrange / (range[1] - range[0]) * length
+
+        length_range = range[1] - range[0]
+
+        self.range_ = range
+
+        self.range = [range[0] + self.width_proportion / 2. * length_range, range[1] - self.width_proportion/ 2.* length_range]
+
+
+
+        super().__init__(win, position, length, height, color, borderColor, self.range, marker_position, show_marker=show_marker,
+                    show_number=show_number,
+                    markerColor=markerColor,
+                    text_height=text_height,
+                    slider_type=slider_type,
+                    slider_width=slider_width,
+                    *args, **kwargs)
+
+    def draw(self):
+        self.bar.draw()
+
+        if self.show_marker:
+            self.marker.draw()
+
+            if self.show_number:
+                lower_range = self.marker_position - self.width_proportion * (self.range_[1] - self.range_[0]) / 2
+                upper_range = self.marker_position + self.width_proportion * (self.range_[1] - self.range_[0]) / 2
+
+                self.number.text = f'${lower_range:.2f} - ${upper_range:.2f}'
+                self.number.draw()
+
+
 
 class ProbabilityPieChart(object):
 

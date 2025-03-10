@@ -1,14 +1,15 @@
 from exptools2.core import PylinkEyetrackerSession, Trial
 from psychopy import event
-from stimuli import ResponseSlider, FixationLines, TextStim
+from stimuli import ResponseSlider, FixationLines, TextStim, RangeResponseSlider
 import yaml
 import os.path as op
 from instruction import InstructionTrial
-from task import TaskTrial, OutroTrial, DummyWaiterTrial, ProbCueTrial
+from task import TaskTrial, OutroTrial, DummyWaiterTrial, ProbCueTrial, TwoStageTasktrial
 import numpy as np
 
 class WTPSession(PylinkEyetrackerSession):
-    def __init__(self, output_str, subject=None, output_dir=None, settings_file=None, run=None, eyetracker_on=False, calibrate_eyetracker=False):
+    def __init__(self, output_str, subject=None, output_dir=None, settings_file=None, run=None, eyetracker_on=False, calibrate_eyetracker=False,
+                 slider_type='natural'):
 
         super().__init__(output_str, output_dir=output_dir, settings_file=settings_file, eyetracker_on=eyetracker_on)
 
@@ -27,24 +28,64 @@ class WTPSession(PylinkEyetrackerSession):
                                             **self.settings['fixation_lines'])
         self.too_late_stimulus = TextStim(self.win, text='Too late!', pos=(0, 0), color=(1, -1, -1), height=0.5)
 
-        self._setup_response_slider()
+        self.slider_type = slider_type
+        self._setup_response_slider(slider_type=slider_type)
 
-    def _setup_response_slider(self):
+        print("Window colorSpace:", self.win.colorSpace)
+
+
+    def _setup_response_slider(self, slider_type='natural'):
 
         position_slider = (0, 0)
         length_line = self.settings['slider'].get('max_length')
 
-        self.response_slider = ResponseSlider(self.win,
-                                         position_slider,
-                                         length_line,
-                                         self.settings['slider'].get('height'),
-                                         self.settings['slider'].get('color'),
-                                         self.settings['slider'].get('borderColor'),
-                                         self.settings['slider'].get('range'),
-                                         marker_position=None,
-                                         markerColor=self.settings['slider'].get('markerColor'),
-                                         borderWidth=self.settings['slider'].get('borderWidth'),
-                                         text_height=self.settings['slider'].get('text_height'))
+        if slider_type in ['natural', 'log']:
+            self.response_slider = ResponseSlider(self.win,
+                                            position_slider,
+                                            length_line,
+                                            self.settings['slider'].get('height'),
+                                            self.settings['slider'].get('color'),
+                                            self.settings['slider'].get('borderColor'),
+                                            self.settings['slider'].get('range'),
+                                            marker_position=None,
+                                            markerColor=self.settings['slider'].get('markerColor'),
+                                            borderWidth=self.settings['slider'].get('borderWidth'),
+                                            text_height=self.settings['slider'].get('text_height'),
+                                            slider_type=slider_type)
+        elif slider_type == 'two-stage':
+
+            width_proportion = self.settings['slider'].get('width_proportion', 0.10)
+
+            self.response_slider1 = RangeResponseSlider(self.win,
+                                            position_slider,
+                                            length_line,
+                                            self.settings['slider'].get('height'),
+                                            self.settings['slider'].get('color'),
+                                            self.settings['slider'].get('borderColor'),
+                                            self.settings['slider'].get('range'),
+                                            marker_position=None,
+                                            markerColor=self.settings['slider'].get('markerColor'),
+                                            borderWidth=self.settings['slider'].get('borderWidth'),
+                                            text_height=self.settings['slider'].get('text_height'),
+                                            slider_type='natural',
+                                            width_proportion=width_proportion,
+                                            )
+
+
+            self.response_slider2 = ResponseSlider(self.win,
+                                            position_slider,
+                                            length_line,
+                                            self.settings['slider'].get('height'),
+                                            self.settings['slider'].get('color'),
+                                            self.settings['slider'].get('borderColor'),
+                                            self.settings['slider'].get('range'),
+                                            show_number=True,
+                                            marker_position=None,
+                                            markerColor=self.settings['slider'].get('markerColor'),
+                                            borderWidth=self.settings['slider'].get('borderWidth'),
+                                            text_height=self.settings['slider'].get('text_height'),
+                                            slider_type='natural')
+
 
     def run(self):
         """ Runs experiment. """
@@ -99,8 +140,13 @@ class WTPSession(PylinkEyetrackerSession):
             np.random.shuffle(payoffs_)
 
             for payoff in payoffs_:
-                self.trials.append(TaskTrial(self, trial_nr, jitter=isis[trial_nr-1], payoff=payoff,
+                
+                if self.slider_type == 'two-stage':
+                    self.trials.append(TwoStageTasktrial(self, trial_nr, jitter=isis[trial_nr-1], payoff=payoff,
                                              prob=prob))
+                else:
+                    self.trials.append(TaskTrial(self, trial_nr, jitter=isis[trial_nr-1], payoff=payoff,
+                                                prob=prob))
                 trial_nr += 1
 
         self.trials.append(OutroTrial(session=self))
