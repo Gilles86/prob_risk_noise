@@ -33,12 +33,12 @@ cloud:
 
 slider:
   max_length: 15
-  range: [.55, 55]
+  range: [0.0, 60]
   borderColor: [-1, -1, -1]
   color: [.5, .5, .5]
   feedbackColor: [1., 1., -1]
-  height: .5
-  borderWidth: 5.
+  height: 1.5
+  borderWidth: .1
   markerColor: [.25, .25, .25]
   text_height: .5
   range_proportion: 0.1

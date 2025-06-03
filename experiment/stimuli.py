@@ -1,6 +1,7 @@
 from psychopy.visual import Circle, Line, Rect, TextStim, Pie
 import numpy as np
 
+range_ = range
 
 class FixationLines(object):
 
@@ -177,6 +178,7 @@ class ResponseSlider(object):
                  text_height=0.5,
                  slider_type='natural',
                  slider_width=None,
+                 borderWidth=0.05,
                  *args, **kwargs):
 
         assert slider_type in ['natural', 'log']
@@ -198,14 +200,14 @@ class ResponseSlider(object):
         self.show_marker = show_marker
 
         self.bar = Rect(win, width=length, height=height, pos=position,
-                        lineColor=borderColor, color=color)
+                        lineColor=borderColor, color=color, lineWidth=borderWidth)
 
         if slider_width is None:
             self.slider_width = height*.5
         else:
             self.slider_width = slider_width
 
-        self.marker = RoundedRectangleWithBorder(win, position, self.slider_width, height*1.5, height*.15, markerColor, borderColor, borderWidth=0.05)
+        self.marker = RoundedRectangleWithBorder(win, position, self.slider_width, height*1.5, height*.15, markerColor, borderColor, borderWidth=borderWidth)
 
         self.setMarkerPosition(marker_position)
 
@@ -239,8 +241,11 @@ class ResponseSlider(object):
             log_max = np.log10(self.range[1])
             log_value = (np.log10(number) - log_min) / (log_max - log_min)
             position_x = self.bar.pos[0] + log_value * self.bar.width - self.bar.width / 2.
-        else:
-            raise ValueError("Unsupported slider type")
+
+
+            # Discrete step size
+            step_size = (self.range[1] - self.range[0]) / self.n_discrete_steps
+            # Round to nearest step
 
         # Set marker position
         self.marker.pos = (position_x, self.bar.pos[1])
@@ -287,7 +292,6 @@ class ResponseSlider(object):
 
         if self.show_number:
             self.number.pos = (self._pos[0], self._pos[1] - self.bar.height*1.75)
-
 class RangeResponseSlider(ResponseSlider):
 
     def __init__(self, win, position, length, height, color, borderColor, range, marker_position,
@@ -339,7 +343,88 @@ class RangeResponseSlider(ResponseSlider):
                 self.number.text = f'${lower_range:.2f} - ${upper_range:.2f}'
                 self.number.draw()
 
+class DiscreteResponseSlider(object):
 
+    def __init__(self, win,
+                 position,
+                 length,
+                 height,
+                 color,
+                 borderColor,
+                 range,
+                 marker_position,
+                 n_steps=6,
+                 show_marker=False,
+                 markerColor=None,
+                 text_height=None,
+                 *args, **kwargs):
+
+        self.range = range
+
+        self.n_steps = n_steps
+        self.width_proportion = 1. / n_steps
+        self.step_size = (self.range[1] - self.range[0]) / n_steps
+        self.bins = np.linspace(self.range[0], self.range[1], n_steps + 1)
+        self.marker_position = marker_position
+        self.show_marker = show_marker
+        self.markerColor = markerColor
+        
+        if text_height is None:
+            text_height = height * 0.5
+
+        self.text_height = text_height
+
+        self.slider_type = 'natural'
+        self.slider_width = length / n_steps
+        self.borderWidth = kwargs.get('borderWidth', 0.15)
+        self.borderColor = borderColor
+        self.color = color
+        self.height = height
+
+        self.bar = Rect(win, width=length, height=height, pos=position, color=color, lineColor=borderColor, lineWidth=self.borderWidth*10)
+        self.marker = Rect(win, width=self.slider_width, height=height, pos=position, color=markerColor, lineColor=borderColor, lineWidth=self.borderWidth*10)
+
+
+        self.text_stimuli = []
+
+        for i in range_(len(self.bins)):
+            text = TextStim(win,
+                            text=f'${self.bins[i]:.2f}',
+                            pos=(position[0] + (i) * self.slider_width - length / 2.,
+                                 position[1] + self.height * .5 + self.text_height), color=(1, 1, 1), units='deg',
+                                 height=self.text_height)
+
+            self.text_stimuli.append(text)
+
+
+    def draw(self):
+        self.bar.draw()
+
+        if self.show_marker:
+            self.marker.draw()
+
+        for stimulus in self.text_stimuli:
+            stimulus.draw()
+
+    def update_marker_position(self, number):
+        number = np.clip(number, self.range[0], self.range[1])
+        closest_bin = np.digitize(number, self.bins) - 1
+        self.marker_position = self.bins[closest_bin]
+        self.marker.pos = (self.bar.pos[0] + (closest_bin + 0.5) * self.slider_width - self.bar.width / 2., self.bar.pos[1])
+        self.marker.fillColor = self.markerColor
+        self.marker.lineColor = self.borderColor
+        self.marker.lineWidth = self.borderWidth
+        self.marker.draw()
+
+    def setMarkerPosition(self, number):
+        self.update_marker_position(number)
+
+    def mouseToMarkerPosition(self, mouse_pos):
+        fraction = (mouse_pos - self.bar.pos[0] + self.bar.width / 2) / self.bar.width
+        fraction = np.clip(fraction, 0, 1 - 1e-6)
+        number = self.range[0] + fraction * (self.range[1] - self.range[0])
+        self.update_marker_position(number)
+        return self.marker_position
 
 class ProbabilityPieChart(object):
 

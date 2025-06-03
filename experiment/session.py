@@ -1,10 +1,10 @@
 from exptools2.core import PylinkEyetrackerSession, Trial
 from psychopy import event
-from stimuli import ResponseSlider, FixationLines, TextStim, RangeResponseSlider
+from stimuli import ResponseSlider, FixationLines, TextStim, RangeResponseSlider, DiscreteResponseSlider
 import yaml
 import os.path as op
 from instruction import InstructionTrial
-from task import TaskTrial, OutroTrial, DummyWaiterTrial, ProbCueTrial, TwoStageTasktrial
+from task import TaskTrial, OutroTrial, DummyWaiterTrial, ProbCueTrial, TwoStageTasktrial, TwoSliderTasktrial
 import numpy as np
 
 class WTPSession(PylinkEyetrackerSession):
@@ -86,6 +86,38 @@ class WTPSession(PylinkEyetrackerSession):
                                             text_height=self.settings['slider'].get('text_height'),
                                             slider_type='natural')
 
+        elif slider_type == 'two-sliders':
+            self.response_slider1 = DiscreteResponseSlider(self.win,
+                                (0, 2),
+                                length_line,
+                                self.settings['slider'].get('height'),
+                                self.settings['slider'].get('color'),
+                                self.settings['slider'].get('borderColor'),
+                                self.settings['slider'].get('range'),
+                                marker_position=None,
+                                markerColor=self.settings['slider'].get('markerColor'),
+                                borderWidth=self.settings['slider'].get('borderWidth'),
+                                text_height=self.settings['slider'].get('text_height'),
+                                slider_type='natural',
+                                n_discrete_steps=self.settings['slider'].get('n_discrete_steps', 7),
+                                )
+            
+
+
+            self.response_slider2 = ResponseSlider(self.win,
+                                            (0, -2),
+                                            length_line,
+                                            self.settings['slider'].get('height'),
+                                            self.settings['slider'].get('color'),
+                                            self.settings['slider'].get('borderColor'),
+                                            self.settings['slider'].get('range'),
+                                            show_number=True,
+                                            marker_position=None,
+                                            markerColor=self.settings['slider'].get('markerColor'),
+                                            borderWidth=self.settings['slider'].get('borderWidth'),
+                                            text_height=self.settings['slider'].get('text_height'),
+                                            slider_type='natural') 
+
 
     def run(self):
         """ Runs experiment. """
@@ -143,6 +175,10 @@ class WTPSession(PylinkEyetrackerSession):
                 
                 if self.slider_type == 'two-stage':
                     self.trials.append(TwoStageTasktrial(self, trial_nr, jitter=isis[trial_nr-1], payoff=payoff,
+                                             prob=prob))
+
+                elif self.slider_type == 'two-sliders':
+                    self.trials.append(TwoSliderTasktrial(self, trial_nr, jitter=isis[trial_nr-1], payoff=payoff,
                                              prob=prob))
                 else:
                     self.trials.append(TaskTrial(self, trial_nr, jitter=isis[trial_nr-1], payoff=payoff,
